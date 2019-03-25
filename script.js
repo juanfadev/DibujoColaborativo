@@ -5,6 +5,8 @@ if (window.WebSocket) {
     alert("Considerupdatingyourbrowser fora betterexperience.");
 }
 
+var output;
+
 window.addEventListener("load", init);
 wsUri = "ws://localhost:9001/";
 
@@ -45,6 +47,7 @@ function doSend(message) {
 }
 
 function writeToScreen(message) {
+    console.log(message);
     var pre = document.createElement("p");
     pre.innerHTML = message;
     output.appendChild(pre);
