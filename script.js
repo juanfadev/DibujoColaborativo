@@ -56,12 +56,8 @@ function selectionHandler() {
 
 function initServer() {
     websocket = new WebSocket('ws://localhost:9001');
-    websocket.onopen = connectionOpen;
+    //websocket.onopen = connectionOpen;
     websocket.onmessage = onMessageFromServer;
-}
-
-function connectionOpen() {
-    websocket.send('connectionopen');
 }
 
 function onMessageFromServer(message) {
@@ -69,7 +65,14 @@ function onMessageFromServer(message) {
     if (isJson(message.data)) {
         var obj = JSON.parse(message.data);
         console.log("gotdata fromserver");
-        addObject(obj.type, obj.data);
+        if (Array.isArray(obj)) {
+            obj.forEach((a) => {
+                let o = JSON.parse(a);
+                addObject(o.type, o.data);
+            });
+        } else {
+            addObject(obj.type, obj.data);
+        }
     }
 }
 
