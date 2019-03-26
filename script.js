@@ -6,12 +6,19 @@ if (window.WebSocket) {
 }
 
 var output;
+var canvas;
+var autoSyncMode;
+var userList;
+var userName;
+var lastCanvas;
 
 window.addEventListener("load", init);
 wsUri = "ws://localhost:9001/";
 
 function init() {
+    userName = prompt("Introduce tu nombre", "Pepe");
     initServer();
+    initUserServer();
     canvas = new fabric.Canvas('canvas');
     canvas.freeDrawingBrush.color = 'green';
     canvas.freeDrawingBrush.lineWidth = 10;
@@ -20,6 +27,7 @@ function init() {
     addTriangle.addEventListener('click', addTriangleHandler);
     pencil.addEventListener('click', pencilHandler);
     selection.addEventListener('click', selectionHandler)
+    autoSyncMode = setInterval(sync, 1000);
 }
 
 function isJson(str) {
@@ -33,17 +41,17 @@ function isJson(str) {
 
 function addCircleHandler() {
     var obj = {radius: 20, fill: 'green', left: 100, top: 100};
-    sendObject('Circle', obj);
+    addObject('Circle', obj);
 }
 
 function addRectangleHandler() {
     var obj = {top: 100, left: 100, width: 60, height: 70, fill: 'red'};
-    sendObject('Rectangle', obj);
+    addObject('Rectangle', obj);
 }
 
 function addTriangleHandler() {
     var obj = {width: 20, height: 30, fill: 'blue', left: 50, top: 50};
-    sendObject('Triangle', obj);
+    addObject('Triangle', obj);
 }
 
 function pencilHandler() {
@@ -56,23 +64,14 @@ function selectionHandler() {
 
 function initServer() {
     websocket = new WebSocket('ws://localhost:9001');
-    //websocket.onopen = connectionOpen;
     websocket.onmessage = onMessageFromServer;
 }
 
 function onMessageFromServer(message) {
     console.log('received: ' + message);
     if (isJson(message.data)) {
-        var obj = JSON.parse(message.data);
-        console.log("gotdata fromserver");
-        if (Array.isArray(obj)) {
-            obj.forEach((a) => {
-                let o = JSON.parse(a);
-                addObject(o.type, o.data);
-            });
-        } else {
-            addObject(obj.type, obj.data);
-        }
+        canvas.loadFromJSON(message.data, canvas.renderAll.bind(canvas));
+        console.log("Got Canvas from server");
     }
 }
 
@@ -86,11 +85,62 @@ function addObject(type, obj) {
         shape = new fabric.Circle(obj);
     }
     canvas.add(shape);
+    sync();
 }
 
 function sendObject(type, obj) {
     websocket.send(JSON.stringify({'type': type, 'data': obj}));
 }
+
+function sync() {
+    let actualCanvas = JSON.stringify(canvas.toJSON());
+    if (lastCanvas === actualCanvas){
+
+    }else{
+        websocket.send(actualCanvas);
+    }
+    lastCanvas = actualCanvas;
+}
+
+//USER SERVER
+
+function initUserServer() {
+    websocketUser = new WebSocket('ws://localhost:9002');
+    websocketUser.onopen = connectionOpen;
+    websocketUser.onmessage = onMessageFromUserServer;
+}
+
+function onMessageFromUserServer(message) {
+    console.log('UserList Message: ' + message);
+    userList = JSON.parse(message.data);
+    console.log(userList);
+    createList();
+}
+
+function connectionOpen() {
+    websocketUser.send(userName);
+}
+
+function createList() {
+    const ul = document.createElement('ul');
+
+    document.getElementById('userList').appendChild(ul);
+
+    userList.forEach(function (item) {
+        let li = document.createElement('li');
+        ul.appendChild(li);
+
+        li.innerHTML += item;
+    });
+}
+
+//CLOSE WEB SOCKETS
+window.onbeforeunload = function() {
+    websocket.onclose = function () {}; // disable onclose handler first
+    websocketUser.onclose = function () {};
+    websocket.close();
+    websocketUser.close();
+};
 
 
 ///TEST WEB SOCKET
