@@ -123,8 +123,11 @@ function connectionOpen() {
 
 function createList() {
     const ul = document.createElement('ul');
-
-    document.getElementById('userList').appendChild(ul);
+    const parent = document.getElementById('userList');
+    while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
+    }
+    parent.appendChild(ul);
 
     userList.forEach(function (item) {
         let li = document.createElement('li');
